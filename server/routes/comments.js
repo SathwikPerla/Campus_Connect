@@ -7,6 +7,43 @@ const moderationMiddleware = require('../middleware/moderation');
 
 const router = express.Router();
 
+// Get all comments (with pagination)
+router.get('/', optionalAuth, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const comments = await Comment.find()
+      .populate('userId', 'username avatar')
+      .populate('postId', 'text image')
+      .populate('parentComment')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalComments = await Comment.countDocuments();
+
+    res.json({
+      success: true,
+      comments,
+      totalComments,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalComments / limit),
+        hasNext: page < Math.ceil(totalComments / limit),
+        hasPrev: page > 1
+      }
+    });
+  } catch (error) {
+    console.error('Get comments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching comments'
+    });
+  }
+});
+
 // Create comment
 router.post('/create', [
   authMiddleware,
