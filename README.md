@@ -12,12 +12,16 @@ A full-stack MERN application that allows users to post messages anonymously or 
 - **Password Reset**: Email-based password recovery system
 
 ### User Features
+
 - User registration and login (email/password or Google OAuth)
 - Profile management with avatar and username updates
 - Post creation with text, images, and tags
 - Like and comment system
 - Real-time notifications
 - Responsive design for mobile and desktop
+- <img width="1449" height="808" alt="Screenshot 2025-10-26 at 12 39 11 AM" src="https://github.com/user-attachments/assets/179235b0-4193-42ee-9cf1-c2815016ccfe" />
+- <img width="949" height="607" alt="Screenshot 2025-10-26 at 12 38 49 AM" src="https://github.com/user-attachments/assets/2e3ce60b-a5cc-4b9c-ada3-adb039f0f602" />
+- <img width="1330" height="826" alt="Screenshot 2025-10-26 at 12 36 01 AM" src="https://github.com/user-attachments/assets/45713ee1-5eb7-4166-ab65-24b7afc39e15" />
 
 ### Moderation Features
 - AI-powered content analysis before posts are published
