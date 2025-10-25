@@ -157,35 +157,7 @@ The application is pre-configured to use a MongoDB Atlas cluster. The connection
 1. Update the `MONGO_URI` in the server `.env` file
 2. Ensure your MongoDB instance is running and accessible
 
-### Google OAuth Setup
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the Google+ API
-4. Create OAuth 2.0 credentials
-5. Add authorized redirect URIs:
-   - `http://localhost:5000/api/auth/google/callback`
-6. Update the environment variables with your credentials
-
-### Email Service Setup
-For password reset functionality:
-
-1. **Gmail Setup:**
-   - Enable 2-factor authentication
-   - Generate an app-specific password
-   - Use your Gmail credentials in the environment variables
-
-2. **Other Email Services:**
-   - Update the nodemailer configuration in `server/routes/auth.js`
-   - Modify the transporter settings for your email provider
-
-### AI Moderation Setup
-The application includes both real and mock moderation:
-
-1. **Real Moderation (Perspective API):**
-   - Get an API key from [Perspective API](https://www.perspectiveapi.com/)
-   - Update `MODERATION_API_KEY` in the environment variables
-
-2. **Mock Moderation:**
+1. **Mock Moderation:**
    - If no API key is provided, the app uses a simple keyword-based filter
    - This allows the app to run without external dependencies
 
