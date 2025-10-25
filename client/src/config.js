@@ -1,5 +1,5 @@
 // API Configuration
-export const BASE_URL = import.meta.env.VITE_API_URL || "https://myapp-backend.vercel.app";
+export const BASE_URL = import.meta.env.VITE_API_URL || "https://campus-connect-iomb.onrender.com";
 
 // API Endpoints
 export const API_ENDPOINTS = {
