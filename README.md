@@ -114,22 +114,20 @@ WhisprNet/
 
    **Backend (.env in server directory):**
    ```env
-   MONGO_URI=mongodb+srv://SathwikPerla:mHZ9H1u3kqOv5OL1@cluster0.liskxzk.mongodb.net/WhisprNetDB
-   PORT=5000
-   JWT_SECRET=whisprnet_super_secret_jwt_key_2024_secure_random_string
-   MODERATION_API_KEY=your_moderation_api_key_here
-   GOOGLE_CLIENT_ID=your_google_client_id_here
-   GOOGLE_CLIENT_SECRET=your_google_client_secret_here
-   EMAIL_USER=your_email@example.com
-   EMAIL_PASS=your_email_password_here
-   NODE_ENV=development
-   CLIENT_URL=http://localhost:5173
+   MONGO_URI=YOUR_MONGODB_CONNECTION_STRING
+PORT=5000
+JWT_SECRET=YOUR_JWT_SECRET_KEY
+MODERATION_API_KEY=YOUR_MODERATION_API_KEY
+EMAIL_USER=YOUR_EMAIL_ADDRESS
+EMAIL_PASS=YOUR_EMAIL_PASSWORD
+NODE_ENV=development
+CLIENT_URL=http://localhost:5173
+
    ```
 
    **Frontend (.env in client directory):**
    ```env
-   VITE_API_URL=http://localhost:5000
-   VITE_GOOGLE_CLIENT_ID=your_google_client_id_here
+VITE_API_URL=YOUR_BACKEND_URL
    ```
 
 5. **Start the applications**
