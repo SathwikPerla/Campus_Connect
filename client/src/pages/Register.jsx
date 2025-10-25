@@ -129,6 +129,7 @@ const Register = () => {
                   onChange={handleChange}
                   required
                   minLength={6}
+                  autoComplete="new-password"
                   className="input-field pl-10 pr-10"
                   placeholder="Create a password"
                 />
@@ -158,6 +159,7 @@ const Register = () => {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   required
+                  autoComplete="new-password"
                   className="input-field pl-10 pr-10"
                   placeholder="Confirm your password"
                 />

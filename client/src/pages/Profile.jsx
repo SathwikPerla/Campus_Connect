@@ -8,6 +8,7 @@ import { FiUser, FiMail, FiCalendar, FiEdit } from 'react-icons/fi'
 import { format } from 'date-fns'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { API_ENDPOINTS } from '../config'
 
 const Profile = () => {
   const { user: currentUser } = useAuth()
@@ -28,7 +29,7 @@ const Profile = () => {
   const { data: profileData, isLoading, error, refetch } = useQuery(
     ['user', profileUserId],
     async () => {
-      const response = await axios.get(`/api/users/${profileUserId}`)
+      const response = await axios.get(API_ENDPOINTS.USERS.PROFILE(profileUserId))
       return response.data
     },
     {
@@ -46,7 +47,7 @@ const Profile = () => {
   const { data: postsData, isLoading: postsLoading } = useQuery(
     ['userPosts', profileUserId],
     async () => {
-      const response = await axios.get(`/api/posts/user/${profileUserId}`)
+      const response = await axios.get(`${API_ENDPOINTS.POSTS.GET_ALL}?userId=${profileUserId}`)
       return response.data
     },
     {
@@ -83,7 +84,7 @@ const Profile = () => {
         formData.append('avatarUrl', editData.avatar)
       }
 
-      const response = await axios.put('/api/users/profile', formData, {
+      const response = await axios.put(API_ENDPOINTS.USERS.UPDATE_PROFILE, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

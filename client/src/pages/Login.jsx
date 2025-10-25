@@ -90,6 +90,7 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleChange}
                   required
+                  autoComplete="current-password"
                   className="input-field pl-10 pr-10"
                   placeholder="Enter your password"
                 />

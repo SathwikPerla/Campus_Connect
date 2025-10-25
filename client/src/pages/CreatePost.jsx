@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { FiX, FiImage, FiTag, FiUpload, FiLink } from 'react-icons/fi'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { API_ENDPOINTS } from '../config'
 
 const CreatePost = () => {
   const { user } = useAuth()
@@ -56,7 +57,7 @@ const CreatePost = () => {
         formDataToSend.append('imageUrl', formData.imageUrl)
       }
 
-      const response = await axios.post('/api/posts/create', formDataToSend, {
+      const response = await axios.post(API_ENDPOINTS.POSTS.CREATE, formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

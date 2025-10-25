@@ -13,6 +13,7 @@ import {
 } from 'react-icons/fi'
 import { useAuth } from '../contexts/AuthContext'
 import axios from 'axios'
+import { API_ENDPOINTS } from '../config'
 import toast from 'react-hot-toast'
 
 const PostCard = ({ post, onUpdate, onDelete }) => {
@@ -32,7 +33,7 @@ const PostCard = ({ post, onUpdate, onDelete }) => {
 
     setIsLoading(true)
     try {
-      const response = await axios.post(`/api/posts/${post._id}/like`)
+      const response = await axios.post(API_ENDPOINTS.POSTS.LIKE(post._id))
       setIsLiked(response.data.isLiked)
       setLikeCount(response.data.likeCount)
     } catch (error) {
@@ -50,7 +51,7 @@ const PostCard = ({ post, onUpdate, onDelete }) => {
 
     setIsLoading(true)
     try {
-      const response = await axios.put(`/api/posts/${post._id}`, {
+      const response = await axios.put(API_ENDPOINTS.POSTS.UPDATE(post._id), {
         text: editText
       })
       
@@ -77,7 +78,7 @@ const PostCard = ({ post, onUpdate, onDelete }) => {
     }
 
     try {
-      await axios.delete(`/api/posts/${post._id}`)
+      await axios.delete(API_ENDPOINTS.POSTS.DELETE(post._id))
       toast.success('Post deleted successfully')
       onDelete?.(post._id)
     } catch (error) {

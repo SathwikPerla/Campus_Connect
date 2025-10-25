@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { API_ENDPOINTS } from '../config'
 
 const AuthContext = createContext()
 
@@ -31,7 +32,7 @@ export const AuthProvider = ({ children }) => {
     const checkAuth = async () => {
       if (token) {
         try {
-          const response = await axios.get('/api/auth/me')
+          const response = await axios.get(API_ENDPOINTS.AUTH.ME)
           setUser(response.data.user)
         } catch (error) {
           console.error('Auth check failed:', error)
@@ -47,7 +48,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('/api/auth/login', { email, password })
+      const response = await axios.post(API_ENDPOINTS.AUTH.LOGIN, { email, password })
       const { token: newToken, user: userData } = response.data
       
       localStorage.setItem('token', newToken)
@@ -65,7 +66,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (username, email, password) => {
     try {
-      const response = await axios.post('/api/auth/register', { username, email, password })
+      const response = await axios.post(API_ENDPOINTS.AUTH.REGISTER, { username, email, password })
       const { token: newToken, user: userData } = response.data
       
       localStorage.setItem('token', newToken)
@@ -85,7 +86,7 @@ export const AuthProvider = ({ children }) => {
 
   const forgotPassword = async (email) => {
     try {
-      await axios.post('/api/auth/forgot-password', { email })
+      await axios.post(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, { email })
       toast.success('Password reset email sent!')
       return { success: true }
     } catch (error) {
@@ -97,7 +98,7 @@ export const AuthProvider = ({ children }) => {
 
   const resetPassword = async (token, password) => {
     try {
-      await axios.post('/api/auth/reset-password', { token, password })
+      await axios.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, { token, password })
       toast.success('Password reset successful!')
       return { success: true }
     } catch (error) {
@@ -120,7 +121,7 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (profileData) => {
     try {
-      const response = await axios.put('/api/users/profile', profileData)
+      const response = await axios.put(API_ENDPOINTS.USERS.UPDATE_PROFILE, profileData)
       setUser(response.data.user)
       toast.success('Profile updated successfully!')
       return { success: true }

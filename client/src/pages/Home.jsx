@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import { FiPlus, FiRefreshCw } from 'react-icons/fi'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { API_ENDPOINTS } from '../config'
 
 const Home = () => {
   const { isAuthenticated } = useAuth()
@@ -21,7 +22,7 @@ const Home = () => {
   const { data, isLoading, error, refetch } = useQuery(
     ['posts', page],
     async () => {
-      const response = await axios.get(`/api/posts?page=${page}&limit=10`)
+      const response = await axios.get(`${API_ENDPOINTS.POSTS.GET_ALL}?page=${page}&limit=10`)
       return response.data
     },
     {
