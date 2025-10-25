@@ -81,41 +81,7 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const googleLogin = async (googleToken) => {
-    try {
-      // Handle Google OAuth callback
-      const urlParams = new URLSearchParams(window.location.search)
-      const tokenFromUrl = urlParams.get('token')
-      
-      if (tokenFromUrl) {
-        localStorage.setItem('token', tokenFromUrl)
-        setToken(tokenFromUrl)
-        
-        const response = await axios.get('/api/auth/me')
-        setUser(response.data.user)
-        
-        toast.success('Google login successful!')
-        window.history.replaceState({}, document.title, window.location.pathname)
-        return { success: true }
-      }
-      
-      return { success: false, message: 'No token received from Google' }
-    } catch (error) {
-      const message = error.response?.data?.message || 'Google login failed'
-      toast.error(message)
-      return { success: false, message }
-    }
-  }
 
-  // Check for Google OAuth callback on mount
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const tokenFromUrl = urlParams.get('token')
-    
-    if (tokenFromUrl && !user) {
-      googleLogin()
-    }
-  }, [])
 
   const forgotPassword = async (email) => {
     try {
@@ -171,7 +137,6 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     register,
-    googleLogin,
     forgotPassword,
     resetPassword,
     logout,

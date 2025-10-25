@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { GoogleLogin } from '@react-oauth/google'
 import { FiMail, FiLock, FiUser, FiEye, FiEyeOff } from 'react-icons/fi'
 import LoadingSpinner from '../components/LoadingSpinner'
 
@@ -55,16 +54,6 @@ const Register = () => {
     setIsLoading(false)
   }
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    setIsLoading(true)
-    
-    // Redirect to Google OAuth endpoint
-    window.location.href = '/api/auth/google'
-  }
-
-  const handleGoogleError = () => {
-    console.error('Google login failed')
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -199,30 +188,6 @@ const Register = () => {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
-              </div>
-            </div>
-
-            {/* Google Login */}
-            <div className="mt-6">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                theme="outline"
-                size="large"
-                width="100%"
-                text="signup_with"
-                shape="rectangular"
-              />
-            </div>
-          </div>
 
           {/* Login Link */}
           <div className="mt-6 text-center">
