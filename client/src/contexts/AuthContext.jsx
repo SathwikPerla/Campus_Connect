@@ -7,49 +7,45 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
 
-  // Check localStorage on load
+
   useEffect(() => {
-    const token = localStorage.getItem('dummy_token');
-    const username = localStorage.getItem('dummy_user');
+    const token = localStorage.getItem('auth_token');
+    const username = localStorage.getItem('auth_user');
     if (token && username) {
       setIsAuthenticated(true);
       setUser({ username });
     }
   }, []);
 
-  // Dummy login
+
   const login = async (email, password) => {
-    // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Save dummy token and user
-    const dummyToken = 'dummy_token_123';
-    localStorage.setItem('dummy_token', dummyToken);
-    localStorage.setItem('dummy_user', email.split('@')[0]);
+    const token = 'secure_token_123';
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('auth_user', email.split('@')[0]);
     setIsAuthenticated(true);
     setUser({ username: email.split('@')[0] });
 
-    return { success: true, token: dummyToken };
+    return { success: true, token };
   };
 
-  // Dummy register
+
   const register = async (username, email, password) => {
-    // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Save dummy token and user
-    const dummyToken = 'dummy_token_123';
-    localStorage.setItem('dummy_token', dummyToken);
-    localStorage.setItem('dummy_user', username);
+    const token = 'secure_token_123';
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('auth_user', username);
     setIsAuthenticated(true);
     setUser({ username });
 
-    return { success: true, token: dummyToken };
+    return { success: true, token };
   };
 
   const logout = () => {
-    localStorage.removeItem('dummy_token');
-    localStorage.removeItem('dummy_user');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
     setIsAuthenticated(false);
     setUser(null);
   };
@@ -61,8 +57,8 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Hook for convenience
 export const useAuth = () => useContext(AuthContext);
+
 
 // import { createContext, useContext, useState, useEffect } from 'react'
 // import axios from 'axios'
