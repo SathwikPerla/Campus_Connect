@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { API_ENDPOINTS } from "../config";
@@ -114,13 +115,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const navigate = useNavigate();
+
   const logout = () => {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
     delete axios.defaults.headers.common["Authorization"];
     toast.success("Logged out successfully!");
-    window.location.href = "/login";
+    
+    // Use navigate instead of window.location.href
+    navigate("/login", { replace: true });
   };
 
   const updateProfile = async (profileData) => {
