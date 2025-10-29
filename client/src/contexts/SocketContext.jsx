@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { io } from 'socket.io-client'
 import { useAuth } from './AuthContext'
 import { SOCKET_URL } from '../config'
+import { toast } from 'react-hot-toast'
 
 const SocketContext = createContext()
 
@@ -18,36 +19,101 @@ export const SocketProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false)
   const { user, isAuthenticated } = useAuth()
 
+  const socketRef = useRef(null);
+
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && !socketRef.current) {
+      console.log('Initializing socket connection to:', SOCKET_URL);
+      
       const newSocket = io(SOCKET_URL, {
         auth: {
+          token: localStorage.getItem('token'),
           userId: user._id,
           username: user.username
-        }
-      })
+        },
+        withCredentials: true,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 10000,
+        autoConnect: true,
+        transports: ['websocket', 'polling']
+      });
 
+      // Connection established
       newSocket.on('connect', () => {
-        console.log('Connected to server')
-        setIsConnected(true)
-      })
+        console.log('Socket connected:', newSocket.id);
+        setIsConnected(true);
+        socketRef.current = newSocket;
+      });
 
-      newSocket.on('disconnect', () => {
-        console.log('Disconnected from server')
-        setIsConnected(false)
-      })
-
+      // Connection error
       newSocket.on('connect_error', (error) => {
-        console.error('Connection error:', error)
-        setIsConnected(false)
-      })
+        console.error('Socket connection error:', error);
+        setIsConnected(false);
+        
+        // Show error toast for connection issues
+        if (error.message === 'xhr poll error') {
+          toast.error('Connection to server failed. Trying to reconnect...');
+        }
+      });
 
-      setSocket(newSocket)
+      // Disconnected
+      newSocket.on('disconnect', (reason) => {
+        console.log('Socket disconnected:', reason);
+        setIsConnected(false);
+        
+        if (reason === 'io server disconnect') {
+          // The server has forcefully disconnected the socket
+          // You might want to attempt to reconnect after a delay
+          setTimeout(() => {
+            newSocket.connect();
+          }, 1000);
+        }
+      });
 
+      // Reconnection attempts
+      newSocket.on('reconnect_attempt', (attempt) => {
+        console.log(`Reconnection attempt ${attempt}`);
+      });
+
+      // Reconnected
+      newSocket.on('reconnect', (attempt) => {
+        console.log(`Reconnected after ${attempt} attempts`);
+        setIsConnected(true);
+      });
+
+      // Reconnection failed
+      newSocket.on('reconnect_failed', () => {
+        console.error('Failed to reconnect');
+        toast.error('Failed to connect to the server. Please refresh the page.');
+      });
+
+      // Error handling
+      newSocket.on('error', (error) => {
+        console.error('Socket error:', error);
+      });
+
+      setSocket(newSocket);
+      socketRef.current = newSocket;
+
+      // Cleanup function
       return () => {
-        newSocket.close()
-      }
-    } else {
+        console.log('Cleaning up socket connection');
+        if (newSocket) {
+          newSocket.off('connect');
+          newSocket.off('disconnect');
+          newSocket.off('connect_error');
+          newSocket.off('reconnect_attempt');
+          newSocket.off('reconnect');
+          newSocket.off('reconnect_failed');
+          newSocket.off('error');
+          newSocket.close();
+          socketRef.current = null;
+        }
+      };
+    } else if (!isAuthenticated && socketRef.current) {
       if (socket) {
         socket.close()
         setSocket(null)

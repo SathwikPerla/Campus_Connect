@@ -17,21 +17,82 @@ const moderationMiddleware = require('./middleware/moderation');
 const Message = require('./models/Message');
 const { globalErrorHandler } = require('./middleware/errorHandler');
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://campusconnect-psi.vercel.app",
+  "https://campus-connect-client.onrender.com",
+  "http://campus-connect-client.onrender.com"
+];
+
 const app = express();
 const server = createServer(app);
+
+// Configure Socket.IO with CORS
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "https://campusconnect-psi.vercel.app",
-    methods: ["GET", "POST"]
-  }
+    origin: function(origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"],
+    credentials: true
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true
+});
+
+// Handle socket connections
+io.on('connection', (socket) => {
+  console.log('A user connected:', socket.id);
+  
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+  
+  // Handle errors
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
+  });
 });
 
 // Security middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.CLIENT_URL || "https://campusconnect-psi.vercel.app",
-  credentials: true
-}));
+
+// CORS configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'https://campusconnect-psi.vercel.app',
+      'https://campus-connect-client.onrender.com',
+      'http://campus-connect-client.onrender.com'
+    ];
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-token'],
+  exposedHeaders: ['set-cookie'],
+  maxAge: 86400
+};
+
+app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({

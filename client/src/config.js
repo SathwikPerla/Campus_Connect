@@ -55,4 +55,7 @@ export const API_ENDPOINTS = {
 };
 
 // Socket configuration
-export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || BASE_URL;
+export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5006'  // Match your backend port
+    : 'https://campus-connect-iomb.onrender.com');

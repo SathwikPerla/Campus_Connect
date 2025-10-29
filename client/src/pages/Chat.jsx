@@ -26,16 +26,28 @@ const Chat = () => {
   useEffect(() => {
     const fetchConversations = async () => {
       try {
-        const response = await axios.get('/api/chat/conversations')
-        setConversations(response.data.conversations)
+        setIsLoading(true);
+        const response = await axios.get(`${SOCKET_URL}/api/chat/conversations`, {
+          withCredentials: true
+        });
+        
+        // Ensure we always set an array, even if the response is malformed
+        if (response.data && Array.isArray(response.data.conversations)) {
+          setConversations(response.data.conversations);
+        } else {
+          console.warn('Unexpected response format:', response.data);
+          setConversations([]);
+        }
       } catch (error) {
-        console.error('Failed to fetch conversations:', error)
+        console.error('Failed to fetch conversations:', error);
+        setConversations([]);
+        toast.error('Failed to load conversations');
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchConversations()
+    fetchConversations();
   }, [])
 
   // Fetch messages for selected conversation
@@ -158,8 +170,8 @@ const Chat = () => {
     }
   }
 
-  const filteredConversations = conversations.filter(conv =>
-    conv.otherUser.username.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredConversations = (conversations || []).filter(conv => 
+    conv?.otherUser?.username?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   if (isLoading) {
