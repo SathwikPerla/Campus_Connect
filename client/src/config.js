@@ -36,11 +36,12 @@ export const API_ENDPOINTS = {
   },
   
   // Users endpoints
-  USERS: {
-    PROFILE: (userId) => `${BASE_URL}/api/users/profile/${userId}`,
-    UPDATE_PROFILE: `${BASE_URL}/api/users/profile`,
-    SEARCH: `${BASE_URL}/api/users/search`,
-  },
+ USERS: {
+  PROFILE: (userId) => `${BASE_URL}/api/users/${userId}`,
+  UPDATE_PROFILE: `${BASE_URL}/api/users/profile`,
+  SEARCH: `${BASE_URL}/api/users/search`,
+},
+
   
   // Chat endpoints
   CHAT: {

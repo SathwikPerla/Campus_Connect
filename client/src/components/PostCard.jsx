@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
-import { 
-  FiHeart, 
-  FiMessageCircle, 
-  FiMoreVertical, 
-  FiEdit, 
+import { BASE_URL } from '../config';
+
+import {
+  FiHeart,
+  FiMessageCircle,
+  FiMoreVertical,
+  FiEdit,
   FiTrash2,
   FiUser,
   FiEye,
@@ -15,6 +17,15 @@ import { useAuth } from '../contexts/AuthContext'
 import axios from 'axios'
 import { API_ENDPOINTS } from '../config'
 import toast from 'react-hot-toast'
+const getImageUrl = (img) => {
+  if (!img) return null;
+  // If backend-stored upload like "/uploads/filename.jpg"
+  if (img.startsWith('/uploads/')) {
+    return `${BASE_URL}${img}`;
+  }
+  // If it's an external URL already (https://)
+  return img;
+};
 
 const PostCard = ({ post, onUpdate, onDelete }) => {
   const { user } = useAuth()
@@ -54,7 +65,7 @@ const PostCard = ({ post, onUpdate, onDelete }) => {
       const response = await axios.put(API_ENDPOINTS.POSTS.UPDATE(post._id), {
         text: editText
       })
-      
+
       toast.success('Post updated successfully')
       setIsEditing(false)
       onUpdate?.(response.data.post)
@@ -97,20 +108,20 @@ const PostCard = ({ post, onUpdate, onDelete }) => {
             </div>
           ) : (
             <Link to={`/profile/${post.userId?._id}`}>
-              <img 
-                src={post.userId?.avatar || 'https://via.placeholder.com/40/007bff/ffffff?text=U'} 
-                alt={post.userId?.username} 
+              <img
+                src={post.userId?.avatar || 'https://via.placeholder.com/40/007bff/ffffff?text=U'}
+                alt={post.userId?.username}
                 className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 hover:border-blue-300 transition-colors cursor-pointer"
                 title={`View ${post.userId?.username}'s profile`}
               />
             </Link>
           )}
-          
+
           <div>
             <div className="flex items-center space-x-2">
               <h3 className="font-semibold text-gray-900 text-sm">
                 {post.isAnonymous ? 'Anonymous User' : (
-                  <Link 
+                  <Link
                     to={`/profile/${post.userId?._id}`}
                     className="hover:text-blue-600 transition-colors"
                   >
@@ -208,12 +219,12 @@ const PostCard = ({ post, onUpdate, onDelete }) => {
             {post.text}
           </p>
         )}
-        
+
         {post.image && (
           <div className="mt-3">
-            <img 
-              src={post.image.startsWith('http') ? post.image : `http://localhost:5004${post.image}`} 
-              alt="Post image" 
+            <img
+              src={getImageUrl(post.image)}
+              alt="Post image"
               className="max-w-full h-auto rounded-lg"
               onError={(e) => {
                 console.error('Image load error:', e.target.src)
@@ -226,7 +237,7 @@ const PostCard = ({ post, onUpdate, onDelete }) => {
         {post.tags && post.tags.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {post.tags.map((tag, index) => (
-              <span 
+              <span
                 key={index}
                 className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
               >
@@ -243,17 +254,16 @@ const PostCard = ({ post, onUpdate, onDelete }) => {
           <button
             onClick={handleLike}
             disabled={isLoading}
-            className={`flex items-center space-x-1 transition-colors ${
-              isLiked 
-                ? 'text-red-500' 
+            className={`flex items-center space-x-1 transition-colors ${isLiked
+                ? 'text-red-500'
                 : 'text-gray-500 hover:text-red-500'
-            } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <FiHeart size={20} className={isLiked ? 'fill-current' : ''} />
             <span className="text-sm font-medium">{likeCount}</span>
           </button>
 
-          <Link 
+          <Link
             to={`/post/${post._id}`}
             className="flex items-center space-x-1 text-gray-500 hover:text-blue-500 transition-colors"
           >
