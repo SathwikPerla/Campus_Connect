@@ -18,6 +18,7 @@ export const API_ENDPOINTS = {
     CREATE: `${BASE_URL}/api/posts/create`,
     GET_ALL: `${BASE_URL}/api/posts`,
     GET_BY_ID: (id) => `${BASE_URL}/api/posts/${id}`,
+    GET_BY_USER: (id) => `${BASE_URL}/api/posts/user/${id}`,
     LIKE: (id) => `${BASE_URL}/api/posts/${id}/like`,
     UPDATE: (id) => `${BASE_URL}/api/posts/${id}`,
     DELETE: (id) => `${BASE_URL}/api/posts/${id}`,
