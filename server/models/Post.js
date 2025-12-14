@@ -20,13 +20,64 @@ const postSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Moderation status
   isApproved: {
     type: Boolean,
     default: true
   },
-  moderationReason: {
+  moderationStatus: {
     type: String,
-    default: null
+    enum: ['pending', 'approved', 'rejected', 'under_review'],
+    default: 'pending'
+  },
+  moderationHistory: [{
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected', 'under_review'],
+      required: true
+    },
+    reason: String,
+    moderatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    moderatedAt: {
+      type: Date,
+      default: Date.now
+    },
+    moderationId: String,
+    confidence: Number,
+    reasons: [String],
+    metadata: mongoose.Schema.Types.Mixed
+  }],
+  // Auto-moderation results
+  autoModeration: {
+    isFlagged: Boolean,
+    confidence: Number,
+    categories: [{
+      name: String,
+      score: Number
+    }],
+    reasons: [String],
+    moderationId: String,
+    timestamp: Date,
+    modelVersion: String
+  },
+  // User appeal information
+  appeal: {
+    status: {
+      type: String,
+      enum: ['none', 'pending', 'approved', 'rejected'],
+      default: 'none'
+    },
+    reason: String,
+    submittedAt: Date,
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    reviewedAt: Date,
+    reviewNotes: String
   },
   likes: [{
     type: mongoose.Schema.Types.ObjectId,

@@ -29,16 +29,28 @@ const Profile = () => {
   const { data: profileData, isLoading, error, refetch } = useQuery(
     ['user', profileUserId],
     async () => {
-      const response = await axios.get(API_ENDPOINTS.USERS.PROFILE(profileUserId))
-      return response.data
+      try {
+        const response = await axios.get(API_ENDPOINTS.USERS.PROFILE(profileUserId));
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        throw new Error(error.response?.data?.message || 'Failed to load profile');
+      }
     },
     {
       enabled: !!profileUserId,
+      retry: 2,
       onSuccess: (data) => {
         setEditData({
-          username: data.user.username,
-          avatar: data.user.avatar
-        })
+          username: data.user?.username || '',
+          avatar: data.user?.avatar || 'https://via.placeholder.com/150/007bff/ffffff?text=U'
+        });
+        if (data.user?.avatar) {
+          setPreviewUrl(data.user.avatar);
+        }
+      },
+      onError: (error) => {
+        toast.error(error.message);
       }
     }
   )
@@ -47,11 +59,22 @@ const Profile = () => {
   const { data: postsData, isLoading: postsLoading } = useQuery(
     ['userPosts', profileUserId],
     async () => {
-      const response = await axios.get(`${API_ENDPOINTS.POSTS.GET_ALL}?userId=${profileUserId}`)
-      return response.data
+      try {
+        const response = await axios.get(
+          `${API_ENDPOINTS.POSTS.GET_ALL}?userId=${profileUserId}`
+        );
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching posts:', error);
+        throw new Error('Failed to load posts');
+      }
     },
     {
-      enabled: !!profileUserId
+      enabled: !!profileUserId,
+      retry: 2,
+      onError: (error) => {
+        toast.error(error.message);
+      }
     }
   )
 
@@ -86,7 +109,8 @@ const Profile = () => {
 
       const response = await axios.put(API_ENDPOINTS.USERS.UPDATE_PROFILE, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       })
       

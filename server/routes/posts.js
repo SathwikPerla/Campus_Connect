@@ -39,27 +39,78 @@ router.post('/create', [
       imagePath = imageUrl;
     }
 
+    // Prepare moderation data
+    const moderationData = {
+      status: 'pending',
+      moderatedAt: new Date(),
+      moderationId: req.moderationResults?.moderationId || `mod-${require('uuid').v4()}`,
+      confidence: req.moderationResults?.text?.confidence || 0,
+      reasons: req.moderationResults?.text?.reasons || []
+    };
+
+    // Create the post with moderation data
     const post = new Post({
       userId: req.user._id,
       text,
       image: imagePath,
       isAnonymous: isAnonymous === 'true' || isAnonymous === true,
-      tags: tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : []
+      tags: tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
+      moderationStatus: moderationData.status,
+      moderationHistory: [{
+        status: moderationData.status,
+        moderatedAt: moderationData.moderatedAt,
+        moderationId: moderationData.moderationId,
+        confidence: moderationData.confidence,
+        reasons: moderationData.reasons
+      }],
+      autoModeration: req.moderationResults?.text ? {
+        isFlagged: req.moderationResults.text.isToxic || false,
+        confidence: req.moderationResults.text.confidence || 0,
+        reasons: req.moderationResults.text.reasons || [],
+        moderationId: req.moderationResults.moderationId,
+        timestamp: new Date(),
+        modelVersion: '1.0.0'
+      } : null
     });
+
+    // If content was flagged but still allowed (e.g., in development), mark for review
+    if (req.moderationResults?.text?.isToxic) {
+      post.moderationStatus = 'under_review';
+      post.isApproved = false;
+      
+      post.moderationHistory.push({
+        status: 'under_review',
+        reason: 'Auto-flagged content requiring review',
+        moderatedAt: new Date(),
+        moderationId: `review-${require('uuid').v4()}`,
+        confidence: req.moderationResults.text.confidence,
+        reasons: req.moderationResults.text.reasons
+      });
+    }
 
     await post.save();
     await post.populate('userId', 'username avatar');
 
+    // Notify admins if content needs review
+    if (post.moderationStatus === 'under_review') {
+      // In a real app, you would send a notification to admin/moderation queue
+      console.log(`Post ${post._id} requires moderation review`);
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Post created successfully',
-      post
+      message: post.moderationStatus === 'under_review' 
+        ? 'Your post is under review by our moderation team' 
+        : 'Post created successfully',
+      post,
+      moderationStatus: post.moderationStatus
     });
   } catch (error) {
     console.error('Create post error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error creating post'
+      message: 'Server error creating post',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });

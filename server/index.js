@@ -1,5 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -13,6 +15,7 @@ const postRoutes = require('./routes/posts');
 const commentRoutes = require('./routes/comments');
 const userRoutes = require('./routes/users');
 const chatRoutes = require('./routes/chat');
+const moderationRoutes = require('./routes/moderation');
 const moderationMiddleware = require('./middleware/moderation');
 const Message = require('./models/Message');
 const { globalErrorHandler } = require('./middleware/errorHandler');
@@ -21,7 +24,9 @@ const allowedOrigins = [
   "http://localhost:5173",
   "https://campusconnect-psi.vercel.app",
   "https://campus-connect-client.onrender.com",
-  "http://campus-connect-client.onrender.com"
+  "http://campus-connect-client.onrender.com",
+  "https://campus-connect-iomb.onrender.com",
+  "http://campus-connect-iomb.onrender.com"
 ];
 
 const app = express();
@@ -92,6 +97,8 @@ const corsOptions = {
   maxAge: 86400
 };
 
+// Enable CORS pre-flight for all routes
+app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
 // Rate limiting
@@ -106,7 +113,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files (uploaded images)
-app.use('/uploads', express.static('uploads'));
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
 
 // Initialize Passport
 app.use(passport.initialize());
@@ -126,6 +137,8 @@ app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/moderation', moderationRoutes);
+app.use("/api/profile", userRoutes);
 
 // Socket.io for real-time chat
 io.on('connection', (socket) => {

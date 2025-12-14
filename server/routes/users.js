@@ -9,28 +9,45 @@ const router = express.Router();
 // Get user profile
 router.get('/:userId', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId).select('-password');
+    console.log('Fetching profile for user ID:', req.params.userId);
+    const user = await User.findById(req.params.userId).select('-password -__v');
     
     if (!user) {
+      console.log('User not found with ID:', req.params.userId);
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
 
-    // Get user's post count
-    const postCount = await Post.countDocuments({ 
-      userId: user._id, 
-      isApproved: true 
-    });
+    try {
+      // Get user's post count
+      const postCount = await Post.countDocuments({ 
+        userId: user._id, 
+        isApproved: true 
+      });
 
-    res.json({
-      success: true,
-      user: {
-        ...user.toJSON(),
-        postCount
+      const userData = user.toObject();
+      // Ensure avatar URL is absolute
+      if (userData.avatar && !userData.avatar.startsWith('http')) {
+        userData.avatar = `https://campus-connect-iomb.onrender.com${userData.avatar}`;
       }
-    });
+
+      res.json({
+        success: true,
+        user: {
+          ...userData,
+          postCount
+        }
+      });
+    } catch (countError) {
+      console.error('Error counting posts:', countError);
+      // Still return user data even if post count fails
+      res.json({
+        success: true,
+        user: user.toObject()
+      });
+    }
   } catch (error) {
     console.error('Get user profile error:', error);
     res.status(500).json({

@@ -7,24 +7,32 @@
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
     "start": "concurrently \"npm run server:start\" \"npm run client:build\"",
     "build": "npm run client:build",
+
     "server:dev": "cd server && npm run dev",
     "server:start": "cd server && npm start",
+
     "client:dev": "cd client && npm run dev",
     "client:build": "cd client && npm run build",
     "client:preview": "cd client && npm run preview",
+
     "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+
     "test": "npm run test:server && npm run test:client",
     "test:server": "cd server && npm test",
     "test:client": "cd client && npm test",
+
     "lint": "npm run lint:server && npm run lint:client",
     "lint:server": "cd server && npm run lint",
     "lint:client": "cd client && npm run lint",
+
     "setup": "./setup.sh",
     "test:api": "./test.sh"
   },
+
   "devDependencies": {
     "concurrently": "^8.2.2"
   },
+
   "keywords": [
     "social",
     "anonymous",
@@ -36,22 +44,23 @@
     "mongodb",
     "socket.io"
   ],
+
   "author": "WhisprNet Team",
   "license": "MIT",
+
   "repository": {
     "type": "git",
     "url": "https://github.com/your-username/whisprnet.git"
   },
+
   "bugs": {
     "url": "https://github.com/your-username/whisprnet/issues"
   },
+
   "homepage": "https://github.com/your-username/whisprnet#readme",
+
   "engines": {
     "node": ">=16.0.0",
     "npm": ">=8.0.0"
   }
 }
-
-
-
-
