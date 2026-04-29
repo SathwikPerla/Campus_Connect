@@ -30,7 +30,8 @@ router.get('/:userId', authMiddleware, async (req, res) => {
       const userData = user.toObject();
       // Ensure avatar URL is absolute
       if (userData.avatar && !userData.avatar.startsWith('http')) {
-        userData.avatar = `https://campus-connect-iomb.onrender.com${userData.avatar}`;
+        const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5004}`;
+        userData.avatar = `${baseUrl}${userData.avatar}`;
       }
 
       res.json({
@@ -99,10 +100,16 @@ router.put('/profile', [
       { new: true, runValidators: true }
     ).select('-password');
 
+    const userObj = user.toObject();
+    if (userObj.avatar && !userObj.avatar.startsWith('http')) {
+      const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5004}`;
+      userObj.avatar = `${baseUrl}${userObj.avatar}`;
+    }
+
     res.json({
       success: true,
       message: 'Profile updated successfully',
-      user
+      user: userObj
     });
   } catch (error) {
     console.error('Update profile error:', error);

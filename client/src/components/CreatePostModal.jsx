@@ -3,6 +3,7 @@ import { FiX, FiImage, FiTag } from 'react-icons/fi'
 import { useAuth } from '../contexts/AuthContext'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { getAvatarUrl } from '../config'
 
 const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   const { user } = useAuth()
@@ -76,7 +77,7 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
           {/* User Info */}
           <div className="flex items-center space-x-3 mb-6">
             <img 
-              src={user?.avatar || 'https://via.placeholder.com/40/007bff/ffffff?text=U'} 
+              src={getAvatarUrl(user?.avatar) || 'https://via.placeholder.com/40/007bff/ffffff?text=U'}
               alt={user?.username} 
               className="w-10 h-10 rounded-full"
             />

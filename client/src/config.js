@@ -7,6 +7,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     REGISTER: `${BASE_URL}/api/auth/register`,
     LOGIN: `${BASE_URL}/api/auth/login`,
+    GOOGLE: `${BASE_URL}/api/auth/google`,
     ME: `${BASE_URL}/api/auth/me`,
     FORGOT_PASSWORD: `${BASE_URL}/api/auth/forgot-password`,
     RESET_PASSWORD: `${BASE_URL}/api/auth/reset-password`,
@@ -47,13 +48,21 @@ export const API_ENDPOINTS = {
   // Chat endpoints
   CHAT: {
     CONVERSATIONS: `${BASE_URL}/api/chat/conversations`,
-    MESSAGES: (roomId) => `${BASE_URL}/api/chat/messages/${roomId}`,
+    MESSAGES: (userId) => `${BASE_URL}/api/chat/messages/${userId}`,
     SEND: `${BASE_URL}/api/chat/send`,
+    START_CONVERSATION: `${BASE_URL}/api/chat/start-conversation`,
   },
   
   // Utility endpoints
   HEALTH: `${BASE_URL}/api/health`,
   UPLOADS: (filename) => `${BASE_URL}/uploads/${filename}`,
+};
+
+// Resolves any avatar/image URL — turns relative /uploads/... paths into absolute URLs
+export const getAvatarUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('/uploads/')) return `${BASE_URL}${url}`;
+  return url;
 };
 
 // Socket configuration

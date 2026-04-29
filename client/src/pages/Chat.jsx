@@ -1,127 +1,176 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
+import { useLocation } from 'react-router-dom'
 import LoadingSpinner from '../components/LoadingSpinner'
 import UserSearch from '../components/UserSearch'
-import { FiPlus, FiMessageCircle, FiUser, FiSearch } from 'react-icons/fi'
-import { formatDistanceToNow } from 'date-fns'
+import { FiPlus, FiMessageCircle, FiSend, FiSearch } from 'react-icons/fi'
+import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { BASE_URL, getAvatarUrl, API_ENDPOINTS } from '../config'
+
+const formatMessageTime = (date) => {
+  const d = new Date(date)
+  if (isToday(d)) return format(d, 'h:mm a')
+  if (isYesterday(d)) return `Yesterday ${format(d, 'h:mm a')}`
+  return format(d, 'MMM d, h:mm a')
+}
+
+const getSenderId = (msg) => msg.senderId?._id || msg.senderId
 
 const Chat = () => {
   const { user } = useAuth()
   const { socket, joinRoom, sendMessage, sendTyping } = useSocket()
+  const location = useLocation()
+  const messagesEndRef = useRef(null)
+
   const [conversations, setConversations] = useState([])
   const [selectedConversation, setSelectedConversation] = useState(null)
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false)
   const [isSending, setIsSending] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
   const [typingUsers, setTypingUsers] = useState([])
+  const [isTyping, setIsTyping] = useState(false)
   const [showUserSearch, setShowUserSearch] = useState(false)
 
-  // Fetch conversations
+  // ── Fetch conversations on mount ──────────────────────────────────────────
   useEffect(() => {
     const fetchConversations = async () => {
       try {
-        setIsLoading(true);
-        const response = await axios.get(`${SOCKET_URL}/api/chat/conversations`, {
+        setIsLoading(true)
+        const response = await axios.get(API_ENDPOINTS.CHAT.CONVERSATIONS, {
           withCredentials: true
-        });
-        
-        // Ensure we always set an array, even if the response is malformed
-        if (response.data && Array.isArray(response.data.conversations)) {
-          setConversations(response.data.conversations);
-        } else {
-          console.warn('Unexpected response format:', response.data);
-          setConversations([]);
-        }
-      } catch (error) {
-        console.error('Failed to fetch conversations:', error);
-        setConversations([]);
-        toast.error('Failed to load conversations');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+        })
 
-    fetchConversations();
+        let list = Array.isArray(response.data.conversations)
+          ? response.data.conversations
+          : []
+
+        if (location.state?.selectedConversation) {
+          const incoming = location.state.selectedConversation
+          const exists = list.some(c => c.roomId === incoming.roomId)
+          if (!exists) list = [incoming, ...list]
+          setSelectedConversation(incoming)
+          window.history.replaceState({}, document.title)
+        }
+
+        setConversations(list)
+      } catch {
+        setConversations([])
+        toast.error('Failed to load conversations')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchConversations()
   }, [])
 
-  // Fetch messages for selected conversation
+  // ── Load messages + join room whenever conversation changes ───────────────
   useEffect(() => {
-    if (selectedConversation) {
-      const fetchMessages = async () => {
-        try {
-          const response = await axios.get(`/api/chat/messages/${selectedConversation.otherUser._id}`)
-          setMessages(response.data.messages)
-          
-          // Join the room for real-time updates
-          joinRoom(selectedConversation.roomId)
-        } catch (error) {
-          console.error('Failed to fetch messages:', error)
-        }
-      }
+    if (!selectedConversation) return
 
-      fetchMessages()
-    }
-  }, [selectedConversation, joinRoom])
-
-  // Socket event listeners
-  useEffect(() => {
-    if (socket) {
-      socket.on('receive-message', (message) => {
-        setMessages(prev => [...prev, message])
-      })
-
-      socket.on('user-typing', (data) => {
-        if (data.userId !== user._id) {
-          setTypingUsers(prev => {
-            if (data.isTyping) {
-              return [...prev.filter(u => u.userId !== data.userId), data]
-            } else {
-              return prev.filter(u => u.userId !== data.userId)
-            }
-          })
-        }
-      })
-
-      socket.on('message-error', (error) => {
-        toast.error(error.error)
-        setIsSending(false)
-      })
-
-      return () => {
-        socket.off('receive-message')
-        socket.off('user-typing')
-        socket.off('message-error')
+    const fetchMessages = async () => {
+      setIsLoadingMessages(true)
+      setMessages([])
+      try {
+        const response = await axios.get(
+          API_ENDPOINTS.CHAT.MESSAGES(selectedConversation.otherUser._id),
+          { withCredentials: true }
+        )
+        setMessages(response.data.messages || [])
+        joinRoom(selectedConversation.roomId)
+      } catch {
+        toast.error('Failed to load messages')
+      } finally {
+        setIsLoadingMessages(false)
       }
     }
-  }, [socket, user])
 
+    fetchMessages()
+  }, [selectedConversation?.roomId])
+
+  // ── Auto-scroll to bottom on new messages ────────────────────────────────
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // ── Socket listeners ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!socket) return
+
+    const handleReceiveMessage = (message) => {
+      // Add to chat panel if the message belongs to the open conversation
+      setMessages(prev => {
+        const roomId = message.roomId
+        if (selectedConversation?.roomId === roomId) {
+          return [...prev, message]
+        }
+        return prev
+      })
+
+      // Always update the sidebar preview
+      setConversations(prev => {
+        const roomId = message.roomId
+        const exists = prev.some(c => c.roomId === roomId)
+        if (exists) {
+          return prev.map(c =>
+            c.roomId === roomId ? { ...c, lastMessage: message } : c
+          )
+        }
+        return prev
+      })
+    }
+
+    const handleUserTyping = (data) => {
+      if (data.userId !== user._id) {
+        setTypingUsers(prev =>
+          data.isTyping
+            ? [...prev.filter(u => u.userId !== data.userId), data]
+            : prev.filter(u => u.userId !== data.userId)
+        )
+      }
+    }
+
+    const handleMessageError = (error) => {
+      toast.error(error.error)
+      setIsSending(false)
+    }
+
+    socket.on('receive-message', handleReceiveMessage)
+    socket.on('user-typing', handleUserTyping)
+    socket.on('message-error', handleMessageError)
+
+    return () => {
+      socket.off('receive-message', handleReceiveMessage)
+      socket.off('user-typing', handleUserTyping)
+      socket.off('message-error', handleMessageError)
+    }
+  }, [socket, user, selectedConversation])
+
+  // ── Send message ──────────────────────────────────────────────────────────
   const handleSendMessage = async (e) => {
     e.preventDefault()
-    
     if (!newMessage.trim() || !selectedConversation) return
 
     setIsSending(true)
+    const text = newMessage.trim()
+    setNewMessage('')
+    sendTyping(selectedConversation.roomId, false)
+    setIsTyping(false)
+
     try {
-      // Send via Socket.io for real-time delivery
       sendMessage({
         senderId: user._id,
         receiverId: selectedConversation.otherUser._id,
-        text: newMessage,
+        text,
         roomId: selectedConversation.roomId
       })
-
-      setNewMessage('')
-      
-      // Stop typing indicator
-      sendTyping(selectedConversation.roomId, false)
-      setIsTyping(false)
-    } catch (error) {
+    } catch {
       toast.error('Failed to send message')
     } finally {
       setIsSending(false)
@@ -131,232 +180,251 @@ const Chat = () => {
   const handleTyping = (e) => {
     const value = e.target.value
     setNewMessage(value)
-
-    if (selectedConversation) {
-      if (value.trim() && !isTyping) {
-        setIsTyping(true)
-        sendTyping(selectedConversation.roomId, true)
-      } else if (!value.trim() && isTyping) {
-        setIsTyping(false)
-        sendTyping(selectedConversation.roomId, false)
-      }
+    if (!selectedConversation) return
+    if (value.trim() && !isTyping) {
+      setIsTyping(true)
+      sendTyping(selectedConversation.roomId, true)
+    } else if (!value.trim() && isTyping) {
+      setIsTyping(false)
+      sendTyping(selectedConversation.roomId, false)
     }
   }
 
-  const handleUserSelect = async (selectedUser) => {
-    try {
-      // Check if conversation already exists
-      const existingConv = conversations.find(conv => 
-        conv.otherUser._id === selectedUser._id
-      )
-
-      if (existingConv) {
-        setSelectedConversation(existingConv)
-      } else {
-        // Create new conversation
-        const roomId = [user._id, selectedUser._id].sort().join('_')
-        const newConversation = {
-          roomId,
-          otherUser: selectedUser,
-          lastMessage: { text: 'Start of conversation', createdAt: new Date() },
-          unreadCount: 0
-        }
-        
-        setConversations(prev => [newConversation, ...prev])
-        setSelectedConversation(newConversation)
-      }
-    } catch (error) {
-      toast.error('Failed to start conversation')
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage(e)
     }
   }
 
-  const filteredConversations = (conversations || []).filter(conv => 
-    conv?.otherUser?.username?.toLowerCase().includes(searchQuery.toLowerCase())
+  const handleUserSelect = (selectedUser) => {
+    const existing = conversations.find(c => c.otherUser._id === selectedUser._id)
+    if (existing) {
+      setSelectedConversation(existing)
+    } else {
+      const roomId = [user._id, selectedUser._id].sort().join('_')
+      const newConv = {
+        roomId,
+        otherUser: selectedUser,
+        lastMessage: { text: 'Say hello 👋', createdAt: new Date() },
+        unreadCount: 0
+      }
+      setConversations(prev => [newConv, ...prev])
+      setSelectedConversation(newConv)
+    }
+    setShowUserSearch(false)
+  }
+
+  const filteredConversations = conversations.filter(c =>
+    c?.otherUser?.username?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  if (isLoading) {
-    return <LoadingSpinner text="Loading conversations..." />
-  }
+  if (isLoading) return <LoadingSpinner text="Loading conversations..." />
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="flex h-[calc(100vh-200px)] bg-white rounded-lg shadow-sm border border-gray-200">
-        {/* Conversations Sidebar */}
-        <div className="w-1/3 border-r border-gray-200 flex flex-col">
-          {/* Header */}
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Messages</h2>
+      <div className="flex h-[calc(100vh-120px)] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+
+        {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+        <div className="w-80 border-r border-gray-200 flex flex-col flex-shrink-0">
+          <div className="p-4 border-b border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-gray-900">Chats</h2>
               <button
                 onClick={() => setShowUserSearch(true)}
-                className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                title="Start new conversation"
+                className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+                title="New conversation"
               >
-                <FiPlus size={18} />
+                <FiPlus size={16} />
               </button>
             </div>
-            
-            {/* Search */}
             <div className="relative">
-              <FiSearch className="absolute left-3 top-3 text-gray-400" size={18} />
+              <FiSearch className="absolute left-3 top-2.5 text-gray-400" size={16} />
               <input
                 type="text"
-                placeholder="Search conversations..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-9 pr-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          {/* Conversations List */}
           <div className="flex-1 overflow-y-auto">
             {filteredConversations.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
-                {searchQuery ? 'No conversations found' : 'No conversations yet'}
+              <div className="p-6 text-center text-gray-400 text-sm">
+                {searchQuery ? 'No results' : 'No conversations yet'}
               </div>
             ) : (
-              filteredConversations.map((conversation) => (
-                <div
-                  key={conversation.roomId}
-                  onClick={() => setSelectedConversation(conversation)}
-                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    selectedConversation?.roomId === conversation.roomId ? 'bg-blue-50' : ''
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={conversation.otherUser.avatar || 'https://via.placeholder.com/40/007bff/ffffff?text=U'}
-                      alt={conversation.otherUser.username}
-                      className="w-10 h-10 rounded-full"
-                    />
+              filteredConversations.map((conv) => {
+                const isSelected = selectedConversation?.roomId === conv.roomId
+                return (
+                  <button
+                    key={conv.roomId}
+                    onClick={() => setSelectedConversation(conv)}
+                    className={`w-full p-3 flex items-center space-x-3 hover:bg-gray-50 transition-colors text-left ${
+                      isSelected ? 'bg-blue-50 border-r-2 border-blue-600' : ''
+                    }`}
+                  >
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={getAvatarUrl(conv.otherUser.avatar) || 'https://via.placeholder.com/40/007bff/ffffff?text=U'}
+                        alt={conv.otherUser.username}
+                        className="w-11 h-11 rounded-full object-cover"
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-gray-900 truncate">
-                          {conversation.otherUser.username}
-                        </h3>
-                        {conversation.unreadCount > 0 && (
-                          <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
-                            {conversation.unreadCount}
+                        <span className="font-semibold text-sm text-gray-900 truncate">
+                          {conv.otherUser.username}
+                        </span>
+                        {conv.lastMessage?.createdAt && (
+                          <span className="text-xs text-gray-400 flex-shrink-0 ml-1">
+                            {formatDistanceToNow(new Date(conv.lastMessage.createdAt), { addSuffix: false })}
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 truncate">
-                        {conversation.lastMessage.text}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {formatDistanceToNow(new Date(conversation.lastMessage.createdAt), { addSuffix: true })}
+                      <p className="text-xs text-gray-500 truncate mt-0.5">
+                        {conv.lastMessage?.text || ''}
                       </p>
                     </div>
-                  </div>
-                </div>
-              ))
+                    {conv.unreadCount > 0 && (
+                      <span className="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                        {conv.unreadCount}
+                      </span>
+                    )}
+                  </button>
+                )
+              })
             )}
           </div>
         </div>
 
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
-          {selectedConversation ? (
-            <>
-              {/* Chat Header */}
-              <div className="p-4 border-b border-gray-200">
-                <div className="flex items-center space-x-3">
-                  <img
-                    src={selectedConversation.otherUser.avatar || 'https://via.placeholder.com/40/007bff/ffffff?text=U'}
-                    alt={selectedConversation.otherUser.username}
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <div>
-                    <h3 className="font-medium text-gray-900">
-                      {selectedConversation.otherUser.username}
-                    </h3>
-                    <p className="text-sm text-gray-500">Online</p>
-                  </div>
-                </div>
+        {/* ── Chat Panel ──────────────────────────────────────────────────── */}
+        {selectedConversation ? (
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* Header */}
+            <div className="flex items-center space-x-3 px-4 py-3 border-b border-gray-200 bg-white">
+              <img
+                src={getAvatarUrl(selectedConversation.otherUser.avatar) || 'https://via.placeholder.com/40/007bff/ffffff?text=U'}
+                alt={selectedConversation.otherUser.username}
+                className="w-10 h-10 rounded-full object-cover"
+              />
+              <div>
+                <h3 className="font-semibold text-gray-900">
+                  {selectedConversation.otherUser.username}
+                </h3>
               </div>
+            </div>
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((message) => (
-                  <div
-                    key={message._id}
-                    className={`flex ${message.senderId._id === user._id ? 'justify-end' : 'justify-start'}`}
-                  >
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1 bg-gray-50">
+              {isLoadingMessages ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                  <FiMessageCircle size={40} className="mb-2" />
+                  <p className="text-sm">No messages yet. Say hello!</p>
+                </div>
+              ) : (
+                messages.map((message, index) => {
+                  const senderId = getSenderId(message)
+                  const isMine = senderId === user._id
+                  const prevMsg = messages[index - 1]
+                  const prevSender = prevMsg ? getSenderId(prevMsg) : null
+                  const showAvatar = !isMine && prevSender !== senderId
+
+                  return (
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        message.senderId._id === user._id
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-200 text-gray-900'
-                      }`}
+                      key={message._id || index}
+                      className={`flex items-end space-x-2 ${isMine ? 'justify-end' : 'justify-start'}`}
                     >
-                      <p className="text-sm">{message.text}</p>
-                      <p className={`text-xs mt-1 ${
-                        message.senderId._id === user._id ? 'text-blue-100' : 'text-gray-500'
-                      }`}>
-                        {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Typing indicators */}
-                {typingUsers.length > 0 && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg">
-                      <div className="flex items-center space-x-1">
-                        <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      {/* Receiver avatar */}
+                      {!isMine && (
+                        <div className="w-6 flex-shrink-0">
+                          {showAvatar && (
+                            <img
+                              src={getAvatarUrl(selectedConversation.otherUser.avatar) || 'https://via.placeholder.com/24/007bff/ffffff?text=U'}
+                              alt=""
+                              className="w-6 h-6 rounded-full object-cover"
+                            />
+                          )}
                         </div>
-                        <span className="text-xs ml-2">
-                          {typingUsers.map(u => u.username).join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
+                      )}
+
+                      <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} max-w-[70%]`}>
+                        <div
+                          className={`px-3 py-2 rounded-2xl text-sm leading-relaxed ${
+                            isMine
+                              ? 'bg-blue-600 text-white rounded-br-sm'
+                              : 'bg-white text-gray-900 rounded-bl-sm shadow-sm border border-gray-100'
+                          }`}
+                        >
+                          {message.text}
+                        </div>
+                        <span className="text-xs text-gray-400 mt-0.5 px-1">
+                          {formatMessageTime(message.createdAt)}
                         </span>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )
+                })
+              )}
 
-              {/* Message Input */}
-              <div className="p-4 border-t border-gray-200">
-                <form onSubmit={handleSendMessage} className="flex space-x-3">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={handleTyping}
-                    placeholder="Type a message..."
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled={isSending}
+              {/* Typing indicator */}
+              {typingUsers.length > 0 && (
+                <div className="flex items-end space-x-2">
+                  <img
+                    src={getAvatarUrl(selectedConversation.otherUser.avatar) || 'https://via.placeholder.com/24/007bff/ffffff?text=U'}
+                    alt=""
+                    className="w-6 h-6 rounded-full object-cover"
                   />
-                  <button
-                    type="submit"
-                    disabled={!newMessage.trim() || isSending}
-                    className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSending ? 'Sending...' : 'Send'}
-                  </button>
-                </form>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <FiMessageCircle size={48} className="text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Select a conversation
-                </h3>
-                <p className="text-gray-500">
-                  Choose a conversation from the sidebar to start chatting
-                </p>
-              </div>
+                  <div className="bg-white border border-gray-100 shadow-sm px-4 py-2 rounded-2xl rounded-bl-sm flex space-x-1 items-center">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
-          )}
-        </div>
+
+            {/* Input */}
+            <div className="px-4 py-3 border-t border-gray-200 bg-white">
+              <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={handleTyping}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Message..."
+                  className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isSending}
+                />
+                <button
+                  type="submit"
+                  disabled={!newMessage.trim() || isSending}
+                  className="w-10 h-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-full flex items-center justify-center transition-colors flex-shrink-0"
+                >
+                  <FiSend size={16} />
+                </button>
+              </form>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center bg-gray-50">
+            <div className="text-center text-gray-400">
+              <FiMessageCircle size={48} className="mx-auto mb-3" />
+              <h3 className="font-medium text-gray-600 mb-1">Your Messages</h3>
+              <p className="text-sm">Select a chat or start a new one</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* User Search Modal */}
       <UserSearch
         isOpen={showUserSearch}
         onClose={() => setShowUserSearch(false)}

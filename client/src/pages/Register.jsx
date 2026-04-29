@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { GoogleLogin } from '@react-oauth/google'
 import { FiMail, FiLock, FiUser, FiEye, FiEyeOff } from 'react-icons/fi'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 const Register = () => {
-  const { register, isAuthenticated } = useAuth()
+  const { register, googleLogin, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     username: '',
@@ -190,6 +191,33 @@ const Register = () => {
             </button>
           </form>
 
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">Or sign up with</span>
+            </div>
+          </div>
+
+          {/* Google Signup */}
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={async (credentialResponse) => {
+                const result = await googleLogin(credentialResponse.credential)
+                if (result.success) navigate('/')
+              }}
+              onError={() => {
+                // error toast is handled inside googleLogin
+              }}
+              width="100%"
+              text="signup_with"
+              shape="rectangular"
+              theme="outline"
+            />
+          </div>
 
           {/* Login Link */}
           <div className="mt-6 text-center">

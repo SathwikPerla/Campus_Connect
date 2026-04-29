@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { FiSearch, FiUser, FiMessageCircle } from 'react-icons/fi'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { getAvatarUrl } from '../config'
 
 const UserSearch = ({ onUserSelect, isOpen, onClose }) => {
   const { user } = useAuth()
@@ -87,7 +88,7 @@ const UserSearch = ({ onUserSelect, isOpen, onClose }) => {
                   className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
                 >
                   <img
-                    src={searchUser.avatar || 'https://via.placeholder.com/40/007bff/ffffff?text=U'}
+                    src={getAvatarUrl(searchUser.avatar) || 'https://via.placeholder.com/40/007bff/ffffff?text=U'}
                     alt={searchUser.username}
                     className="w-10 h-10 rounded-full"
                   />

@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { FiX, FiImage, FiTag, FiUpload, FiLink } from 'react-icons/fi'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { API_ENDPOINTS } from '../config'
+import { API_ENDPOINTS, getAvatarUrl } from '../config'
 
 const CreatePost = () => {
   const { user } = useAuth()
@@ -110,7 +110,7 @@ const CreatePost = () => {
           {/* User Info */}
           <div className="flex items-center space-x-3">
             <img 
-              src={user?.avatar || 'https://via.placeholder.com/40/007bff/ffffff?text=U'} 
+              src={getAvatarUrl(user?.avatar) || 'https://via.placeholder.com/40/007bff/ffffff?text=U'}
               alt={user?.username} 
               className="w-10 h-10 rounded-full"
             />

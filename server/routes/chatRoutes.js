@@ -11,6 +11,9 @@ const { authMiddleware } = require('../middleware/Auth');
 
 const router = express.Router();
 
+// ✅ Start or retrieve a conversation with a user
+router.post('/start-conversation', authMiddleware, startConversation);
+
 // Get chat messages between two users
 router.get('/messages/:otherUserId', authMiddleware, getMessages);
 
@@ -26,11 +29,4 @@ router.put('/mark-read/:roomId', authMiddleware, markMessagesAsRead);
 // Get unread message count
 router.get('/unread-count', authMiddleware, getUnreadCount);
 
-// ✅ START OR RETRIEVE A CONVERSATION WITH A USER (MAIN NEW ENDPOINT)
-router.post('/start-conversation', authMiddleware, startConversation);
-
 module.exports = router;
-
-
-
-

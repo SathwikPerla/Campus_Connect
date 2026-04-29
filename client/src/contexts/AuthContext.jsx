@@ -90,6 +90,24 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const googleLogin = async (credential) => {
+    try {
+      const response = await axios.post(API_ENDPOINTS.AUTH.GOOGLE, { credential });
+      const { token: newToken, user: userData } = response.data;
+
+      localStorage.setItem("token", newToken);
+      setToken(newToken);
+      setUser(userData);
+
+      toast.success("Signed in with Google!");
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.message || "Google sign-in failed";
+      toast.error(message);
+      return { success: false, message };
+    }
+  };
+
   const forgotPassword = async (email) => {
     try {
       await axios.post(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, { email });
@@ -128,6 +146,15 @@ export const AuthProvider = ({ children }) => {
     navigate("/login", { replace: true });
   };
 
+  const refreshUser = async () => {
+    try {
+      const response = await axios.get(API_ENDPOINTS.AUTH.ME);
+      setUser(response.data.user);
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  };
+
   const updateProfile = async (profileData) => {
     try {
       const response = await axios.put(
@@ -149,11 +176,13 @@ export const AuthProvider = ({ children }) => {
     token,
     loading,
     login,
+    googleLogin,
     register,
     forgotPassword,
     resetPassword,
     logout,
     updateProfile,
+    refreshUser,
     isAuthenticated: !!user,
   };
 

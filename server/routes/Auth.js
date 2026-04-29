@@ -4,8 +4,11 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { body, validationResult } = require('express-validator');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const { authMiddleware } = require('../middleware/Auth');
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const router = express.Router();
 
@@ -184,9 +187,14 @@ router.post('/login', [
 // Get current user
 router.get('/me', authMiddleware, async (req, res) => {
   try {
+    const userData = req.user.toObject();
+    if (userData.avatar && !userData.avatar.startsWith('http')) {
+      const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5004}`;
+      userData.avatar = `${baseUrl}${userData.avatar}`;
+    }
     res.json({
       success: true,
-      user: req.user
+      user: userData
     });
   } catch (error) {
     console.error('Get current user error:', error);
@@ -348,6 +356,92 @@ router.post('/change-password', [
       success: false,
       message: 'Server error changing password'
     });
+  }
+});
+
+// Google OAuth
+router.post('/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ success: false, message: 'Google credential is required' });
+    }
+
+    // Verify the Google ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    // Case 1: returning Google user
+    let user = await User.findOne({ googleId });
+    if (user) {
+      user.lastActive = new Date();
+      await user.save();
+    } else {
+      // Case 2: existing email/password account — link the Google ID
+      user = await User.findOne({ email });
+      if (user) {
+        user.googleId = googleId;
+        if (picture && user.avatar === 'https://via.placeholder.com/150/007bff/ffffff?text=U') {
+          user.avatar = picture;
+        }
+        user.lastActive = new Date();
+        await user.save();
+      } else {
+        // Case 3: brand-new Google user — create account
+        // Build a unique username from the Google display name
+        let baseUsername = (name || email.split('@')[0])
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, '_')
+          .slice(0, 25);
+        if (baseUsername.length < 3) baseUsername = 'user_' + baseUsername;
+
+        let username = baseUsername;
+        let suffix = 1;
+        while (await User.findOne({ username })) {
+          username = `${baseUsername}_${suffix++}`;
+        }
+
+        user = new User({
+          username,
+          email,
+          googleId,
+          avatar: picture || 'https://via.placeholder.com/150/007bff/ffffff?text=U',
+          isVerified: true, // Google accounts are pre-verified
+        });
+        await user.save();
+      }
+    }
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+      domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined,
+    });
+
+    res.json({
+      success: true,
+      message: 'Google login successful',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar,
+        isVerified: user.isVerified,
+      },
+    });
+  } catch (error) {
+    console.error('Google auth error:', error);
+    res.status(401).json({ success: false, message: 'Google authentication failed' });
   }
 });
 

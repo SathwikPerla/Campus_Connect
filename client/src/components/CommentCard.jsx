@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { FiHeart, FiMessageSquare, FiMoreVertical, FiEdit, FiTrash2 } from 'react-icons/fi'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { getAvatarUrl } from '../config'
 
 const CommentCard = ({ comment, onUpdate, onDelete, onReply }) => {
   const { user } = useAuth()
@@ -75,7 +76,7 @@ const CommentCard = ({ comment, onUpdate, onDelete, onReply }) => {
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center space-x-2">
           <img 
-            src={comment.userId?.avatar || 'https://via.placeholder.com/24/007bff/ffffff?text=U'} 
+            src={getAvatarUrl(comment.userId?.avatar) || 'https://via.placeholder.com/24/007bff/ffffff?text=U'}
             alt={comment.userId?.username} 
             className="w-6 h-6 rounded-full"
           />
