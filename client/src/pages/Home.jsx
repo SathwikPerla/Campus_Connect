@@ -44,7 +44,7 @@ const Home = () => {
     setIsLoadingMore(true)
     try {
       const nextPage = page + 1
-      const response = await axios.get(`/api/posts?page=${nextPage}&limit=10`)
+      const response = await axios.get(`${API_ENDPOINTS.POSTS.GET_ALL}?page=${nextPage}&limit=10`)
       setPosts(prev => [...prev, ...response.data.posts])
       setPage(nextPage)
       setHasMore(response.data.pagination.hasNext)

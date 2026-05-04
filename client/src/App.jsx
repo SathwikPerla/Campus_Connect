@@ -61,7 +61,11 @@ function App() {
                   <Home />
                 </ProtectedRoute>
               } />
-              <Route path="/post/:id" element={<PostDetail />} />
+              <Route path="/post/:id" element={
+                <ProtectedRoute>
+                  <PostDetail />
+                </ProtectedRoute>
+              } />
               
               {/* Auth routes (redirect if already logged in) */}
               <Route 
